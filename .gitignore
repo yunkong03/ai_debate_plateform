@@ -1,2 +1,5 @@
 # local tooling state (browse skill, etc.) — not project source
 .gstack/
+
+# python bytecode cache (mcp-server has no venv/.gitignore of its own)
+__pycache__/

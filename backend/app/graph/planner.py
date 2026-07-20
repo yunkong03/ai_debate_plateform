@@ -59,13 +59,28 @@ def _build_prompt(topic: str) -> str:
     return PLANNER_PROMPT.format(topic=topic)
 
 
+def _normalize_stance(raw: object) -> Optional[str]:
+    """LLM이 JSON null 대신 문자열 "null"/"none"을 주는 경우까지 처리한다.
+
+    (실제 확인된 버그: stance="null" 문자열이 그대로 들어가 워커 id가
+    'economist_null'처럼 생성됨 — _worker_id/​build_graph._flat_id가
+    전부 이 함수의 출력을 기준으로 동작하므로 여기서 한 번만 정리하면 된다.)
+    """
+    if not isinstance(raw, str):
+        return None
+    normalized = raw.strip()
+    if not normalized or normalized.lower() in ("null", "none"):
+        return None
+    return normalized
+
+
 def _parse_plan(raw_response: str) -> PlanResult:
     """LLM이 반환한 JSON 문자열을 PlanResult로 파싱한다."""
     data = json.loads(raw_response)
     return PlanResult(
         topic=data["topic"],
         workers=[
-            WorkerSpec(role=w["role"], stance=w.get("stance"), tools=w.get("tools", []))
+            WorkerSpec(role=w["role"], stance=_normalize_stance(w.get("stance")), tools=w.get("tools", []))
             for w in data["workers"]
         ],
         rounds=data["rounds"],

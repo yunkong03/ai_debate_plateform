@@ -21,8 +21,10 @@ DOCS = [
 @mcp.tool
 def search(query: str, k: int = 2) -> str:
     """토론 주제와 관련된 자료를 키워드 겹침 기준으로 찾아 반환한다 (단어 겹침 · 실무는 임베딩/하이브리드)."""
-    scored = sorted(DOCS, key=lambda d: -sum(w in d["body"] for w in query.split()))
-    top = scored[:k]
+    scored = [(d, sum(w in d["body"] for w in query.split())) for d in DOCS]
+    top = [d for d, score in sorted(scored, key=lambda p: -p[1])[:k] if score > 0]
+    if not top:
+        return f"'{query}'와 관련된 자료를 찾지 못했습니다."
     return "\n".join(f"- {d['title']}: {d['body']}" for d in top)
 
 

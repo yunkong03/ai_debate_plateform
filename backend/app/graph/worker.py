@@ -194,13 +194,15 @@ JSON이 아닌 발언 텍스트만 출력합니다.
 JUDGE_ANSWER_PROMPT = """당신은 AI 토론의 Judge입니다.
 토론 주제: "{topic}"
 
-지금까지의 토론 내용:
+지금까지의 토론 내용 (각 줄은 "[역할 · 입장] 발언 내용" 형식입니다):
 {transcript}
 
 판단(reason): {reason}
 Observation: {observation}
 
-위 토론 내용을 검토해 최종 판정을 내리세요. 어느 쪽 주장이 더 설득력 있었는지와 그 이유를 밝히세요.
+위 토론 내용을 검토해 최종 판정을 내리세요. 반드시 각 줄에 표시된 입장(찬성/반대)과
+실제 발언 내용을 근거로 판단하세요. 참가자 이름이나 역할 이름만 보고 판단하지 마세요.
+어느 쪽 주장이 더 설득력 있었는지와 그 이유를 밝히세요.
 JSON이 아닌 판정 텍스트만 출력합니다.
 """
 
@@ -220,10 +222,23 @@ def _split_expert(expert: str) -> Tuple[str, Optional[str]]:
     return expert, None
 
 
+_SHORT_STANCE_LABELS = {"pro": "찬성", "con": "반대"}
+
+
+def _short_stance_label(stance: Optional[str]) -> str:
+    return _SHORT_STANCE_LABELS.get(stance, "중립")
+
+
 def _format_transcript(messages: List[Message]) -> str:
+    """각 줄에 실제 role/stance를 명시한다. speaker id(예: economist_pro)의
+    이름 패턴만으로 입장을 추측하지 않도록, 여기서 한 번 명시적으로 풀어준다."""
     if not messages:
         return "(아직 발언 없음)"
-    return "\n".join(f"- {m['speaker']}: {m['content']}" for m in messages)
+    lines = []
+    for m in messages:
+        role, stance = _split_expert(m["speaker"])
+        lines.append(f"- [{role} · {_short_stance_label(stance)}] {m['content']}")
+    return "\n".join(lines)
 
 
 def _reason_prompt(

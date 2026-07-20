@@ -5,3 +5,4 @@ langgraph
 fastmcp
 python-dotenv
 httpx
+asyncpg

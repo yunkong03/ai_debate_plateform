@@ -5,6 +5,7 @@ from typing import Any, AsyncGenerator, Dict
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 
+from app.core.db import list_debates, save_debate
 from app.core.schemas import DebateResponse, DebateRequest, ExpertOpinion
 from app.graph.build_graph import build_graph
 from app.graph.state import DebateState
@@ -79,7 +80,9 @@ async def _stream_debate(topic: str) -> AsyncGenerator[str, None]:
             for node_name, node_output in chunk.items():
                 _apply_update(state, node_output)
                 yield _sse(_stage_name(node_name, node_output), node_output)
-        yield _sse("final", _to_response(topic, state).model_dump())
+        response = _to_response(topic, state)
+        yield _sse("final", response.model_dump())
+        await save_debate(topic, state.get("workers", []), state.get("messages", []), response.verdict)
     except Exception as exc:
         # 스트림은 이미 200으로 시작된 뒤라 상태코드를 바꿀 수 없으므로
         # SSE error 이벤트로 실패를 알린다.
@@ -95,3 +98,9 @@ def start_debate(request: DebateRequest) -> StreamingResponse:
         raise HTTPException(status_code=400, detail="topic은 비어 있을 수 없습니다.")
 
     return StreamingResponse(_stream_debate(topic), media_type="text/event-stream")
+
+
+@router.get("s")
+async def get_debates() -> list:
+    """최근 토론 기록을 반환한다. DB(DATABASE_URL) 미설정 시 빈 리스트."""
+    return await list_debates()

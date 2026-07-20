@@ -22,6 +22,8 @@ class Settings:
     nvidia_base_url: str = os.getenv("NVIDIA_BASE_URL", "https://integrate.api.nvidia.com/v1")
     nvidia_model: str = os.getenv("NVIDIA_MODEL", "qwen/qwen2.5-7b-instruct")
     mcp_server_url: str = os.getenv("MCP_SERVER_URL", "")
+    # Neon(Postgres) 연결 문자열. 비어있으면 기록 기능은 조용히 꺼진다(데모가 DB에 의존하지 않도록).
+    database_url: str = os.getenv("DATABASE_URL", "")
 
 
 @lru_cache

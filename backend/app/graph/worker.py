@@ -112,7 +112,13 @@ class SearchTool(Tool):
         self._mcp = mcp_client or _default_mcp_client()
 
     def run(self, query: str) -> str:
-        return self._mcp.call_tool(self.name, query)
+        try:
+            return self._mcp.call_tool(self.name, query)
+        except Exception:
+            # 실제 MCP 서버가 죽어있거나 접속 실패해도 토론 전체가 죽지 않도록
+            # Mock으로 폴백한다.
+            logger.warning("[search] MCP 호출 실패, Mock으로 폴백", exc_info=True)
+            return MockMCPClient().call_tool(self.name, query)
 
 
 # ---------- Tool Registry ----------
